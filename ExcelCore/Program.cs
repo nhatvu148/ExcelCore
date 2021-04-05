@@ -16,6 +16,7 @@ namespace ExcelCore
             string user = "root";
             string password = "123456789";
             string database = "jmu";
+            string shipInfoID = "1";
             string startTime = "";
             string endTime = "";
             if (args == null || args.Length == 0)
@@ -30,8 +31,9 @@ namespace ExcelCore
                 user = Convert.ToString(args[1]);
                 password = Convert.ToString(args[2]);
                 database = Convert.ToString(args[3]);
-                startTime = Convert.ToString(args[4]);
-                endTime = Convert.ToString(args[5]);
+                shipInfoID = Convert.ToString(args[4]);
+                startTime = Convert.ToString(args[5]);
+                endTime = Convert.ToString(args[6]);
             }
 
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -47,9 +49,9 @@ namespace ExcelCore
             con.Open();
 
             string sql = startTime != "" && endTime != "" ?
-                $"SELECT NumofMeasurePoint, MeasurePointData FROM statistics.state_statistics WHERE datetime BETWEEN '{startTime}' AND '{endTime}'"
+                $"SELECT NumofMeasurePoint, MeasurePointData FROM statistics.state_statistics WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
                 :
-                "SELECT NumofMeasurePoint, MeasurePointData FROM statistics.state_statistics"
+                $"SELECT NumofMeasurePoint, MeasurePointData FROM statistics.state_statistics WHERE ShipInfo_ID='{shipInfoID}'"
                 ;
 
             using var cmd = new MySqlCommand(sql, con);

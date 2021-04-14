@@ -41,7 +41,9 @@ namespace ExcelCore
             string pathDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}";
 
             var fileSource = new FileInfo($"{pathDirectory}/sample.xlsx");
+            var fileGyroSource = new FileInfo($"{pathDirectory}/Gyro.xlsx");
             var fileDestination = new FileInfo($"{pathDirectory}/../output/応力・加速度グラフ.xlsx");
+            var fileGyroDestination = new FileInfo($"{pathDirectory}/../output/Gyroグラフ.xlsx");
 
             string cs = @$"server={host};userid={user};password={password};database={database}";
 
@@ -70,6 +72,7 @@ namespace ExcelCore
                 menrList.Add(m1[0..(numofMeasurePoint + 2)]);
                 devlList.Add(m1[(numofMeasurePoint + 2)..(2 * numofMeasurePoint + 4)]);
             }
+            rdr.Close();
 
             using (var excelFileSource = new ExcelPackage(fileSource))
             using (var excelFileDestination = new ExcelPackage(fileDestination))
@@ -93,6 +96,41 @@ namespace ExcelCore
                 }
 
                 excelFileSource.SaveAs(fileDestination);
+            }
+
+
+            string sqlGyro = startTime != "" && endTime != "" ?
+                $"SELECT datetime, Roll_Max, Pitch_Max, Yaw_Max FROM statistics.gyro WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
+                :
+                $"SELECT datetime, Roll_Max, Pitch_Max, Yaw_Max FROM statistics.gyro WHERE ShipInfo_ID='{shipInfoID}'"
+                ;
+            using var cmdGyro = new MySqlCommand(sqlGyro, con);
+            using MySqlDataReader rdrGyro = cmdGyro.ExecuteReader();
+
+            List<string> dateList = new List<string>();
+            List<double> rollList = new List<double>();
+            List<double> pitchList = new List<double>();
+            List<double> yawList = new List<double>();
+            while (rdrGyro.Read())
+            {
+                dateList.Add(rdrGyro.GetString(0));
+                rollList.Add(JsonConvert.DeserializeObject<double>(rdrGyro.GetString(1)));
+                pitchList.Add(JsonConvert.DeserializeObject<double>(rdrGyro.GetString(2)));
+                yawList.Add(JsonConvert.DeserializeObject<double>(rdrGyro.GetString(3)));
+            }
+
+            using (var excelFileSource = new ExcelPackage(fileGyroSource))
+            {
+                var gyroWorksheetSource = excelFileSource.Workbook.Worksheets[0];
+                for (int i = 0; i < dateList.Count; i++)
+                {
+                    gyroWorksheetSource.Cells[i + 2, 1].Value = dateList[i];
+                    gyroWorksheetSource.Cells[i + 2, 2].Value = rollList[i];
+                    gyroWorksheetSource.Cells[i + 2, 3].Value = pitchList[i];
+                    gyroWorksheetSource.Cells[i + 2, 4].Value = yawList[i];
+                }
+
+                excelFileSource.SaveAs(fileGyroDestination);
             }
         }
     }

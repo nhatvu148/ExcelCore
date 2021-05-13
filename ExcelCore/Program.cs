@@ -44,14 +44,17 @@ namespace ExcelCore
 
             var fileSource = new FileInfo($"{pathDirectory}/sample.xlsx");
             var fileGyroSource = new FileInfo($"{pathDirectory}/Gyro.xlsx");
+            var fileWaveSource = new FileInfo($"{pathDirectory}/Wave.xlsx");
             var fileDestination = new FileInfo($"{outDir}/応力・加速度グラフ.xlsx");
             var fileGyroDestination = new FileInfo($"{outDir}/Gyroグラフ.xlsx");
+            var fileWaveDestination = new FileInfo($"{outDir}/Waveグラフ.xlsx");
 
             string cs = @$"server={host};userid={user};password={password};database={database}";
 
             using var con = new MySqlConnection(cs);
             con.Open();
 
+            // Create Main charts
             string sql = startTime != "" && endTime != "" ?
                 $"SELECT NumofMeasurePoint, MeasurePointData FROM statistics.state_statistics WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
                 :
@@ -100,7 +103,7 @@ namespace ExcelCore
                 excelFileSource.SaveAs(fileDestination);
             }
 
-
+            // Create Gyro charts
             string sqlGyro = startTime != "" && endTime != "" ?
                 $"SELECT datetime, Roll_Max, Pitch_Max, Yaw_Max FROM statistics.gyro WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
                 :
@@ -120,6 +123,7 @@ namespace ExcelCore
                 pitchList.Add(JsonConvert.DeserializeObject<double>(rdrGyro.GetString(2)));
                 yawList.Add(JsonConvert.DeserializeObject<double>(rdrGyro.GetString(3)));
             }
+            rdrGyro.Close();
 
             using (var excelFileSource = new ExcelPackage(fileGyroSource))
             {
@@ -133,6 +137,39 @@ namespace ExcelCore
                 }
 
                 excelFileSource.SaveAs(fileGyroDestination);
+            }
+
+            // Create Wave charts
+            string sqlWave = startTime != "" && endTime != "" ?
+                $"SELECT datetime, WaveHeight, WavePeriod FROM statistics.waves WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
+                :
+                $"SELECT datetime, WaveHeight, WavePeriod FROM statistics.waves WHERE ShipInfo_ID='{shipInfoID}'"
+                ;
+            using var cmdWave = new MySqlCommand(sqlWave, con);
+            using MySqlDataReader rdrWave = cmdWave.ExecuteReader();
+
+            List<string> dateList2 = new List<string>();
+            List<double> waveHList = new List<double>();
+            List<double> wavePList = new List<double>();
+            while (rdrWave.Read())
+            {
+                dateList2.Add(rdrWave.GetString(0));
+                waveHList.Add(JsonConvert.DeserializeObject<double>(rdrWave.GetString(1)));
+                wavePList.Add(JsonConvert.DeserializeObject<double>(rdrWave.GetString(2)));
+            }
+            rdrWave.Close();
+
+            using (var excelFileSource = new ExcelPackage(fileWaveSource))
+            {
+                var waveWorksheetSource = excelFileSource.Workbook.Worksheets[0];
+                for (int i = 0; i < dateList2.Count; i++)
+                {
+                    waveWorksheetSource.Cells[i + 2, 1].Value = dateList2[i];
+                    waveWorksheetSource.Cells[i + 2, 2].Value = waveHList[i];
+                    waveWorksheetSource.Cells[i + 2, 3].Value = wavePList[i];
+                }
+
+                excelFileSource.SaveAs(fileWaveDestination);
             }
         }
     }

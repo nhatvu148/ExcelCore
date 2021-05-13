@@ -12,6 +12,8 @@ namespace ExcelCore
     {
         static void Main(string[] args)
         {
+            string pathDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}";
+
             string host = "localhost";
             string user = "root";
             string password = "123456789";
@@ -19,6 +21,7 @@ namespace ExcelCore
             string shipInfoID = "1";
             string startTime = "";
             string endTime = "";
+            string outDir = $"{pathDirectory}/../output";
             if (args == null || args.Length == 0)
             {
                 // no arguments
@@ -34,16 +37,15 @@ namespace ExcelCore
                 shipInfoID = Convert.ToString(args[4]);
                 startTime = Convert.ToString(args[5]);
                 endTime = Convert.ToString(args[6]);
+                outDir = Convert.ToString(args[7]);
             }
 
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-            string pathDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}";
-
             var fileSource = new FileInfo($"{pathDirectory}/sample.xlsx");
             var fileGyroSource = new FileInfo($"{pathDirectory}/Gyro.xlsx");
-            var fileDestination = new FileInfo($"{pathDirectory}/../output/応力・加速度グラフ.xlsx");
-            var fileGyroDestination = new FileInfo($"{pathDirectory}/../output/Gyroグラフ.xlsx");
+            var fileDestination = new FileInfo($"{outDir}/応力・加速度グラフ.xlsx");
+            var fileGyroDestination = new FileInfo($"{outDir}/Gyroグラフ.xlsx");
 
             string cs = @$"server={host};userid={user};password={password};database={database}";
 

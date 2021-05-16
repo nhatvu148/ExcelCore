@@ -6,7 +6,7 @@ using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Diagnostics;
+// using System.Diagnostics;
 
 namespace ExcelCore
 {
@@ -14,8 +14,8 @@ namespace ExcelCore
     {
         static void Main(string[] args)
         {
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
+            // Stopwatch stopwatch = new Stopwatch();
+            // stopwatch.Start();
 
             string pathDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}";
 
@@ -56,78 +56,36 @@ namespace ExcelCore
 
             string cs = @$"server={host};userid={user};password={password};database={database}";
 
-            using var con = new MySqlConnection(cs);
-            con.Open();
-
-            // Get SQL data for Main charts
-            string sql = startTime != "" && endTime != "" ?
-                $"SELECT NumofMeasurePoint, MeasurePointData FROM statistics.state_statistics WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
-                :
-                $"SELECT NumofMeasurePoint, MeasurePointData FROM statistics.state_statistics WHERE ShipInfo_ID='{shipInfoID}'"
-                ;
-
-            using var cmd = new MySqlCommand(sql, con);
-
-            using MySqlDataReader rdr = cmd.ExecuteReader();
-
-            int numofMeasurePoint = 0;
-            List<double[]> menrList = new List<double[]>();
-            List<double[]> devlList = new List<double[]>();
-
-            while (rdr.Read())
-            {
-                numofMeasurePoint = JsonConvert.DeserializeObject<int>(rdr.GetString(0));
-
-                double[] m1 = JsonConvert.DeserializeObject<double[]>(rdr.GetString(1));
-                menrList.Add(m1[0..(numofMeasurePoint + 2)]);
-                devlList.Add(m1[(numofMeasurePoint + 2)..(2 * numofMeasurePoint + 4)]);
-            }
-            rdr.Close();
-
-            // Get SQL data for Gyro charts
-            string sqlGyro = startTime != "" && endTime != "" ?
-                $"SELECT datetime, Roll_Max, Pitch_Max, Yaw_Max FROM statistics.gyro WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
-                :
-                $"SELECT datetime, Roll_Max, Pitch_Max, Yaw_Max FROM statistics.gyro WHERE ShipInfo_ID='{shipInfoID}'"
-                ;
-            using var cmdGyro = new MySqlCommand(sqlGyro, con);
-            using MySqlDataReader rdrGyro = cmdGyro.ExecuteReader();
-
-            List<string> dateList = new List<string>();
-            List<double> rollList = new List<double>();
-            List<double> pitchList = new List<double>();
-            List<double> yawList = new List<double>();
-            while (rdrGyro.Read())
-            {
-                dateList.Add(rdrGyro.GetString(0));
-                rollList.Add(JsonConvert.DeserializeObject<double>(rdrGyro.GetString(1)));
-                pitchList.Add(JsonConvert.DeserializeObject<double>(rdrGyro.GetString(2)));
-                yawList.Add(JsonConvert.DeserializeObject<double>(rdrGyro.GetString(3)));
-            }
-            rdrGyro.Close();
-
-            // Get SQL data for Wave charts
-            string sqlWave = startTime != "" && endTime != "" ?
-                $"SELECT datetime, WaveHeight, WavePeriod FROM statistics.waves WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
-                :
-                $"SELECT datetime, WaveHeight, WavePeriod FROM statistics.waves WHERE ShipInfo_ID='{shipInfoID}'"
-                ;
-            using var cmdWave = new MySqlCommand(sqlWave, con);
-            using MySqlDataReader rdrWave = cmdWave.ExecuteReader();
-
-            List<string> dateList2 = new List<string>();
-            List<double> waveHList = new List<double>();
-            List<double> wavePList = new List<double>();
-            while (rdrWave.Read())
-            {
-                dateList2.Add(rdrWave.GetString(0));
-                waveHList.Add(JsonConvert.DeserializeObject<double>(rdrWave.GetString(1)));
-                wavePList.Add(JsonConvert.DeserializeObject<double>(rdrWave.GetString(2)));
-            }
-            rdrWave.Close();
-
             Parallel.Invoke(() =>
             {
+                using var con = new MySqlConnection(cs);
+                con.Open();
+
+                // Get SQL data for Main charts
+                string sql = startTime != "" && endTime != "" ?
+                    $"SELECT NumofMeasurePoint, MeasurePointData FROM statistics.state_statistics WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
+                    :
+                    $"SELECT NumofMeasurePoint, MeasurePointData FROM statistics.state_statistics WHERE ShipInfo_ID='{shipInfoID}'"
+                    ;
+
+                using var cmd = new MySqlCommand(sql, con);
+
+                using MySqlDataReader rdr = cmd.ExecuteReader();
+
+                int numofMeasurePoint = 0;
+                List<double[]> menrList = new List<double[]>();
+                List<double[]> devlList = new List<double[]>();
+
+                while (rdr.Read())
+                {
+                    numofMeasurePoint = JsonConvert.DeserializeObject<int>(rdr.GetString(0));
+
+                    double[] m1 = JsonConvert.DeserializeObject<double[]>(rdr.GetString(1));
+                    menrList.Add(m1[0..(numofMeasurePoint + 2)]);
+                    devlList.Add(m1[(numofMeasurePoint + 2)..(2 * numofMeasurePoint + 4)]);
+                }
+                rdr.Close();
+
                 // Create Main charts
                 using (var excelFileSource = new ExcelPackage(fileSource))
                 using (var excelFileDestination = new ExcelPackage(fileDestination))
@@ -154,6 +112,31 @@ namespace ExcelCore
                 }
             }, () =>
             {
+                using var con = new MySqlConnection(cs);
+                con.Open();
+
+                // Get SQL data for Gyro charts
+                string sqlGyro = startTime != "" && endTime != "" ?
+                    $"SELECT datetime, Roll_Max, Pitch_Max, Yaw_Max FROM statistics.gyro WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
+                    :
+                    $"SELECT datetime, Roll_Max, Pitch_Max, Yaw_Max FROM statistics.gyro WHERE ShipInfo_ID='{shipInfoID}'"
+                    ;
+                using var cmdGyro = new MySqlCommand(sqlGyro, con);
+                using MySqlDataReader rdrGyro = cmdGyro.ExecuteReader();
+
+                List<string> dateList = new List<string>();
+                List<double> rollList = new List<double>();
+                List<double> pitchList = new List<double>();
+                List<double> yawList = new List<double>();
+                while (rdrGyro.Read())
+                {
+                    dateList.Add(rdrGyro.GetString(0));
+                    rollList.Add(JsonConvert.DeserializeObject<double>(rdrGyro.GetString(1)));
+                    pitchList.Add(JsonConvert.DeserializeObject<double>(rdrGyro.GetString(2)));
+                    yawList.Add(JsonConvert.DeserializeObject<double>(rdrGyro.GetString(3)));
+                }
+                rdrGyro.Close();
+
                 // Create Gyro charts
                 using (var excelFileSource = new ExcelPackage(fileGyroSource))
                 {
@@ -170,6 +153,29 @@ namespace ExcelCore
                 }
             }, () =>
             {
+                using var con = new MySqlConnection(cs);
+                con.Open();
+
+                // Get SQL data for Wave charts
+                string sqlWave = startTime != "" && endTime != "" ?
+                    $"SELECT datetime, WaveHeight, WavePeriod FROM statistics.waves WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
+                    :
+                    $"SELECT datetime, WaveHeight, WavePeriod FROM statistics.waves WHERE ShipInfo_ID='{shipInfoID}'"
+                    ;
+                using var cmdWave = new MySqlCommand(sqlWave, con);
+                using MySqlDataReader rdrWave = cmdWave.ExecuteReader();
+
+                List<string> dateList2 = new List<string>();
+                List<double> waveHList = new List<double>();
+                List<double> wavePList = new List<double>();
+                while (rdrWave.Read())
+                {
+                    dateList2.Add(rdrWave.GetString(0));
+                    waveHList.Add(JsonConvert.DeserializeObject<double>(rdrWave.GetString(1)));
+                    wavePList.Add(JsonConvert.DeserializeObject<double>(rdrWave.GetString(2)));
+                }
+                rdrWave.Close();
+
                 // Create Wave charts
                 using (var excelFileSource = new ExcelPackage(fileWaveSource))
                 {
@@ -185,8 +191,8 @@ namespace ExcelCore
                 }
             });
 
-            stopwatch.Stop();
-            Console.WriteLine("Time elapsed: {0}", stopwatch.Elapsed);
+            // stopwatch.Stop();
+            // Console.WriteLine("Time elapsed: {0}", stopwatch.Elapsed);
         }
     }
 }

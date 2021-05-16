@@ -5,6 +5,8 @@ using System.Reflection;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace ExcelCore
 {
@@ -12,6 +14,9 @@ namespace ExcelCore
     {
         static void Main(string[] args)
         {
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+
             string pathDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}";
 
             string host = "localhost";
@@ -54,7 +59,7 @@ namespace ExcelCore
             using var con = new MySqlConnection(cs);
             con.Open();
 
-            // Create Main charts
+            // Get SQL data for Main charts
             string sql = startTime != "" && endTime != "" ?
                 $"SELECT NumofMeasurePoint, MeasurePointData FROM statistics.state_statistics WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
                 :
@@ -79,31 +84,7 @@ namespace ExcelCore
             }
             rdr.Close();
 
-            using (var excelFileSource = new ExcelPackage(fileSource))
-            using (var excelFileDestination = new ExcelPackage(fileDestination))
-            {
-                var menrWorksheetSource = excelFileSource.Workbook.Worksheets[0];
-                for (int i = 1; i <= menrList.Count; i++)
-                {
-                    for (int j = 1; j <= numofMeasurePoint + 2; j++)
-                    {
-                        menrWorksheetSource.Cells[i + 1, j].Value = menrList[i - 1][j - 1];
-                    }
-                }
-
-                var devlWorksheetSource = excelFileSource.Workbook.Worksheets[1];
-                for (int i = 1; i <= devlList.Count; i++)
-                {
-                    for (int j = 1; j <= numofMeasurePoint + 2; j++)
-                    {
-                        devlWorksheetSource.Cells[i + 1, j].Value = devlList[i - 1][j - 1];
-                    }
-                }
-
-                excelFileSource.SaveAs(fileDestination);
-            }
-
-            // Create Gyro charts
+            // Get SQL data for Gyro charts
             string sqlGyro = startTime != "" && endTime != "" ?
                 $"SELECT datetime, Roll_Max, Pitch_Max, Yaw_Max FROM statistics.gyro WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
                 :
@@ -125,21 +106,7 @@ namespace ExcelCore
             }
             rdrGyro.Close();
 
-            using (var excelFileSource = new ExcelPackage(fileGyroSource))
-            {
-                var gyroWorksheetSource = excelFileSource.Workbook.Worksheets[0];
-                for (int i = 0; i < dateList.Count; i++)
-                {
-                    gyroWorksheetSource.Cells[i + 2, 1].Value = dateList[i];
-                    gyroWorksheetSource.Cells[i + 2, 2].Value = rollList[i];
-                    gyroWorksheetSource.Cells[i + 2, 3].Value = pitchList[i];
-                    gyroWorksheetSource.Cells[i + 2, 4].Value = yawList[i];
-                }
-
-                excelFileSource.SaveAs(fileGyroDestination);
-            }
-
-            // Create Wave charts
+            // Get SQL data for Wave charts
             string sqlWave = startTime != "" && endTime != "" ?
                 $"SELECT datetime, WaveHeight, WavePeriod FROM statistics.waves WHERE ShipInfo_ID='{shipInfoID}' AND datetime BETWEEN '{startTime}' AND '{endTime}'"
                 :
@@ -159,18 +126,67 @@ namespace ExcelCore
             }
             rdrWave.Close();
 
-            using (var excelFileSource = new ExcelPackage(fileWaveSource))
+            Parallel.Invoke(() =>
             {
-                var waveWorksheetSource = excelFileSource.Workbook.Worksheets[0];
-                for (int i = 0; i < dateList2.Count; i++)
+                // Create Main charts
+                using (var excelFileSource = new ExcelPackage(fileSource))
+                using (var excelFileDestination = new ExcelPackage(fileDestination))
                 {
-                    waveWorksheetSource.Cells[i + 2, 1].Value = dateList2[i];
-                    waveWorksheetSource.Cells[i + 2, 2].Value = waveHList[i];
-                    waveWorksheetSource.Cells[i + 2, 3].Value = wavePList[i];
-                }
+                    var menrWorksheetSource = excelFileSource.Workbook.Worksheets[0];
+                    for (int i = 1; i <= menrList.Count; i++)
+                    {
+                        for (int j = 1; j <= numofMeasurePoint + 2; j++)
+                        {
+                            menrWorksheetSource.Cells[i + 1, j].Value = menrList[i - 1][j - 1];
+                        }
+                    }
 
-                excelFileSource.SaveAs(fileWaveDestination);
-            }
+                    var devlWorksheetSource = excelFileSource.Workbook.Worksheets[1];
+                    for (int i = 1; i <= devlList.Count; i++)
+                    {
+                        for (int j = 1; j <= numofMeasurePoint + 2; j++)
+                        {
+                            devlWorksheetSource.Cells[i + 1, j].Value = devlList[i - 1][j - 1];
+                        }
+                    }
+
+                    excelFileSource.SaveAs(fileDestination);
+                }
+            }, () =>
+            {
+                // Create Gyro charts
+                using (var excelFileSource = new ExcelPackage(fileGyroSource))
+                {
+                    var gyroWorksheetSource = excelFileSource.Workbook.Worksheets[0];
+                    for (int i = 0; i < dateList.Count; i++)
+                    {
+                        gyroWorksheetSource.Cells[i + 2, 1].Value = dateList[i];
+                        gyroWorksheetSource.Cells[i + 2, 2].Value = rollList[i];
+                        gyroWorksheetSource.Cells[i + 2, 3].Value = pitchList[i];
+                        gyroWorksheetSource.Cells[i + 2, 4].Value = yawList[i];
+                    }
+
+                    excelFileSource.SaveAs(fileGyroDestination);
+                }
+            }, () =>
+            {
+                // Create Wave charts
+                using (var excelFileSource = new ExcelPackage(fileWaveSource))
+                {
+                    var waveWorksheetSource = excelFileSource.Workbook.Worksheets[0];
+                    for (int i = 0; i < dateList2.Count; i++)
+                    {
+                        waveWorksheetSource.Cells[i + 2, 1].Value = dateList2[i];
+                        waveWorksheetSource.Cells[i + 2, 2].Value = waveHList[i];
+                        waveWorksheetSource.Cells[i + 2, 3].Value = wavePList[i];
+                    }
+
+                    excelFileSource.SaveAs(fileWaveDestination);
+                }
+            });
+
+            stopwatch.Stop();
+            Console.WriteLine("Time elapsed: {0}", stopwatch.Elapsed);
         }
     }
 }

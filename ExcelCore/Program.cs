@@ -47,12 +47,12 @@ namespace ExcelCore
 
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-            var fileSource = new FileInfo($"{pathDirectory}/sample.xlsx");
-            var fileGyroSource = new FileInfo($"{pathDirectory}/Gyro.xlsx");
-            var fileWaveSource = new FileInfo($"{pathDirectory}/Wave.xlsx");
-            var fileDestination = new FileInfo($"{outDir}/応力・加速度グラフ.xlsx");
-            var fileGyroDestination = new FileInfo($"{outDir}/Gyroグラフ.xlsx");
-            var fileWaveDestination = new FileInfo($"{outDir}/Waveグラフ.xlsx");
+            var fileSource = new FileInfo($"{pathDirectory}/sample.xlsm");
+            var fileGyroSource = new FileInfo($"{pathDirectory}/Gyro.xlsm");
+            var fileWaveSource = new FileInfo($"{pathDirectory}/Wave.xlsm");
+            var fileDestination = new FileInfo($"{outDir}/Stress_Acce_graph.xlsm");
+            var fileGyroDestination = new FileInfo($"{outDir}/Gyro_graph.xlsm");
+            var fileWaveDestination = new FileInfo($"{outDir}/Wave_graph.xlsm");
 
             string cs = @$"server={host};userid={user};password={password};database={database}";
 

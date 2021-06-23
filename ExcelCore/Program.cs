@@ -6,7 +6,10 @@ using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-// using System.Diagnostics;
+using Excel = Microsoft.Office.Interop.Excel;
+using System.Collections;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ExcelCore
 {
@@ -14,8 +17,8 @@ namespace ExcelCore
     {
         static void Main(string[] args)
         {
-            // Stopwatch stopwatch = new Stopwatch();
-            // stopwatch.Start();
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
 
             string pathDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}";
 
@@ -47,12 +50,12 @@ namespace ExcelCore
 
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-            var fileSource = new FileInfo($"{pathDirectory}/sample.xlsm");
-            var fileGyroSource = new FileInfo($"{pathDirectory}/Gyro.xlsm");
-            var fileWaveSource = new FileInfo($"{pathDirectory}/Wave.xlsm");
-            var fileDestination = new FileInfo($"{outDir}/Stress_Acce_graph.xlsm");
-            var fileGyroDestination = new FileInfo($"{outDir}/Gyro_graph.xlsm");
-            var fileWaveDestination = new FileInfo($"{outDir}/Wave_graph.xlsm");
+            var fileSource = new FileInfo($"{pathDirectory}/sample.xlsx");
+            var fileGyroSource = new FileInfo($"{pathDirectory}/Gyro.xlsx");
+            var fileWaveSource = new FileInfo($"{pathDirectory}/Wave.xlsx");
+            var fileDestination = new FileInfo($"{outDir}/Stress_Acce_graph.xlsx");
+            var fileGyroDestination = new FileInfo($"{outDir}/Gyro_graph.xlsx");
+            var fileWaveDestination = new FileInfo($"{outDir}/Wave_graph.xlsx");
 
             string cs = @$"server={host};userid={user};password={password};database={database}";
 
@@ -110,6 +113,8 @@ namespace ExcelCore
 
                     excelFileSource.SaveAs(fileDestination);
                 }
+
+                ExportExcelChart($"{outDir}/Stress_Acce_graph.xlsx", outDir);
             }, () =>
             {
                 using var con = new MySqlConnection(cs);
@@ -151,6 +156,8 @@ namespace ExcelCore
 
                     excelFileSource.SaveAs(fileGyroDestination);
                 }
+
+                ExportExcelChart($"{outDir}/Gyro_graph.xlsx", outDir);
             }, () =>
             {
                 using var con = new MySqlConnection(cs);
@@ -189,10 +196,38 @@ namespace ExcelCore
 
                     excelFileSource.SaveAs(fileWaveDestination);
                 }
+
+                ExportExcelChart($"{outDir}/Wave_graph.xlsx", outDir);
             });
 
-            // stopwatch.Stop();
-            // Console.WriteLine("Time elapsed: {0}", stopwatch.Elapsed);
+            stopwatch.Stop();
+            Console.WriteLine("Time elapsed: {0}", stopwatch.Elapsed);
+        }
+
+
+        public static void ExportExcelChart(string filePath, string dirPath)
+        {
+            var excelApp = new Excel.Application();
+            var wb = excelApp.Workbooks.Open(filePath);
+            var ws = (Excel.Worksheet)wb.Sheets["graph"];
+            var chartObjects = ws.ChartObjects() as IEnumerable;
+
+            var options = new ParallelOptions { MaxDegreeOfParallelism = int.MaxValue };
+            Parallel.ForEach(chartObjects.Cast<Excel.ChartObject>(), options, co =>
+            {
+                co.Select();
+                Excel.Chart chart = co.Chart;
+                chart.Export(Path.ChangeExtension(dirPath + "/" + chart.Name, ".png"), "PNG", false);
+            });
+
+            //foreach (Excel.ChartObject co in chartObjects)
+            //{
+            //    co.Select();
+            //    Excel.Chart chart = co.Chart;
+            //    chart.Export(Path.ChangeExtension(dirPath + "/" + chart.Name, ".png"), "PNG", false);
+            //}
+            wb.Close();
+            excelApp.Quit();
         }
     }
 }
